@@ -1,0 +1,99 @@
+---
+title: "Learning computational geometry"
+author: "Michael Sumner"
+date: "21 February 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Computational geometry
+
+```{r naiveChull}
+
+vecrize <- TRUE
+set.seed(1)
+pts <- cbind(matrix(rnorm(150) , ncol = 2), 0)
+
+
+plot(pts)
+system.time({
+  edges <- t(combn(seq(nrow(pts)), 2))
+  edgetest <- logical(nrow(edges))
+
+  for (ie in seq(nrow(edges))) {
+    edge <- pts[edges[ie, ], ]
+    #lines(edge, col = rgb(1, 0, 0, 0.3))
+    kpts <- setdiff(seq(nrow(pts)), edges[ie, ])
+    if (vecrize) {
+
+      test <- SameSide(pts[kpts[-1], , drop = FALSE], pts[kpts[-length(kpts)], , drop = FALSE],
+                       edge[1, , drop = FALSE], edge[2, , drop = FALSE])
+    } else {
+      test <- TRUE
+      for (k in seq(length(kpts) -1)) {
+        test <- test && SameSide(pts[kpts[k], , drop = FALSE], pts[kpts[k + 1], , drop = FALSE],
+                                 edge[1, , drop = FALSE], edge[2, , drop = FALSE])
+      }
+
+    }
+    if (all(test)) {
+      edgetest[ie] <- TRUE
+      #lines(edge, lty =2, lwd = 3)
+    }
+
+  }
+
+})
+
+apply(edges[edgetest, ], 1, function(x) lines(pts[x, ], lwd = 4))
+```
+
+
+```{r algochull}
+pts <- cbind(matrix(sample(rnorm(150000), 15000) , ncol = 2), 0)
+# library(maptools)
+# data(wrld_simpl)
+# map <- subset(wrld_simpl, NAME == "Australia")
+# pts <- coordinates(as(as(map, "SpatialLines"), "SpatialPoints"))
+
+np <- nrow(pts)
+system.time({
+## sort x,y
+ord <- order(pts[,1], pts[,2])
+#plot(pts[ord, ], col = grey(seq(0.2, 0.6, length = length(ord))), pch = 19)
+pts1 <- pts[ord, ]
+
+
+L_upper <- c(1, 2)
+for (i in 3:np) {
+  L_upper <- c(L_upper, i)
+  ll <- length(L_upper)
+  while(ll > 2 && !turnright(pts1[tail(L_upper, 3), ])) {
+    L_upper <- L_upper[-(ll - 1)]
+    ll <- length(L_upper)
+  }
+}
+
+L_lower <- c(np, np - 1)
+for (i in (np-2):1) {
+  L_lower <- c(L_lower, i)
+  ll <- length(L_lower)
+   while(ll > 2 && !turnright(pts1[tail(L_lower, 3), ])) {
+    L_lower <- L_lower[-(ll - 1)]
+    ll <- length(L_lower)
+  }
+}
+L_lower <- L_lower[-c(1, length(L_lower))]
+
+chul <- c(L_upper, L_lower)
+})
+
+plot(pts1)
+lines(pts1[c(chul, chul[1]), ])
+
+```
+
+
